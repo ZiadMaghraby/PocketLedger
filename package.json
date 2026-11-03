@@ -1,0 +1,9 @@
+{
+  "name": "pocketledger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first personal finance dashboard with monthly budgets and validated CSV imports.",
+  "scripts": { "start": "node scripts/serve.js", "test": "node --test" },
+  "engines": { "node": ">=22" }
+}
