@@ -53,3 +53,7 @@ The included server binds to localhost and is a development server, not an authe
 ## Development
 
 Keep changes focused on a user need, include regression tests for data behavior, and run `npm test` before opening a PR. Never use real financial data in fixtures. Potential follow-ups include explicit CSV column mapping, recurring transactions, and accessible annual reports. Each should be scoped and tested as a complete feature.
+
+### Filtered CSV export
+
+Use the month selector, search, type, and category filters to choose records, then select **Export filtered CSV**. Exports include exact decimal amounts and UTF-8 text. Formula-like descriptions receive a leading apostrophe for spreadsheet safety; use JSON backups for lossless archival of those strings. Filters affect the table and export, while summary cards continue to show the whole month.

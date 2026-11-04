@@ -1,3 +1,4 @@
+import { filterTransactions, exportCSV } from './reports.js';
 import { CATEGORIES, cents, transaction, monthly, emptyState, validateState, previewCSV, updateTransaction } from './core.js';
 const $ = selector => document.querySelector(selector), KEY = 'pocketledger.v1';
 const today = new Date();
@@ -15,6 +16,7 @@ function save(next, restoring = false) {
 }
 const money = value => new Intl.NumberFormat('en', { style: 'currency', currency: state.currency }).format(value / 100);
 $('#month').value = localDate.slice(0, 7);
+$('#category-filter').insertAdjacentHTML('beforeend', CATEGORIES.map(c => `<option>${c}</option>`).join(''));
 $('#entry-category').innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join('');
 function render() {
   const summary = monthly(state, $('#month').value);
@@ -29,7 +31,9 @@ function render() {
   $('#spending-chart').innerHTML = `<div class="donut" role="img" aria-label="${summary.expense ? 'Expense distribution; values listed below' : 'No expenses this month'}" style="--ring:${stops.length ? `conic-gradient(${stops.join(',')})` : 'var(--line)'}"><div><small>TOTAL SPENT</small><strong>${money(summary.expense)}</strong></div></div>`;
   $('#spending-list').innerHTML = spending.map((c, i) => `<div class="legend"><span><i style="background:${colors[i]}"></i>${c.category}</span><strong>${Math.round(c.spent / summary.expense * 100)}%</strong></div>`).join('') || '<p class="muted center">Your spending breakdown will appear here.</p>';
   const query = $('#search').value.trim().toLowerCase();
-  const visible = summary.entries.filter(t => `${t.description} ${t.category}`.toLowerCase().includes(query)).sort((a, b) => b.date.localeCompare(a.date));
+  const visible = filterTransactions(summary.entries, { query, type: $('#type-filter').value, category: $('#category-filter').value });
+  $('#filtered-count').textContent = `${visible.length} of ${summary.entries.length} shown`;
+  $('#export-csv').disabled = visible.length === 0;
   $('#count').textContent = summary.entries.length;
   $('#rows').innerHTML = visible.map(t => `<tr><td>${t.date}</td><td class="description">${escape(t.description)}</td><td><span class="tag">${t.category}</span></td><td class="amount ${t.type}">${t.type === 'income' ? '+' : '−'}${money(t.amount)}</td><td><button class="quiet" data-edit="${escape(t.id)}" aria-label="Edit ${escape(t.description)}">Edit</button><button class="delete quiet" data-id="${escape(t.id)}" aria-label="Delete ${escape(t.description)}">×</button></td></tr>`).join('');
   if (!visible.length && summary.entries.length) $('#rows').innerHTML = '<tr><td colspan="5" class="center muted">No transactions match your search.</td></tr>';
@@ -38,6 +42,16 @@ function render() {
 }
 $('#month').onchange = () => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test($('#month').value)) $('#month').value = localDate.slice(0, 7); render(); };
 $('#search').oninput = render;
+$('#type-filter').onchange = $('#category-filter').onchange = render;
+$('#export-csv').onclick = () => {
+  const entries = filterTransactions(monthly(state, $('#month').value).entries, { query: $('#search').value, type: $('#type-filter').value, category: $('#category-filter').value });
+  download(exportCSV(entries), 'text/csv;charset=utf-8', 'pocketledger-' + $('#month').value + '.csv');
+};
+function download(content, type, filename) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 $('#currency').onchange = () => {
   const currency = $('#currency').value;
   if ((state.transactions.length || Object.keys(state.budgets).length) && !confirm('This changes the currency label only. Amounts are not converted. Continue?')) { render(); return; }
