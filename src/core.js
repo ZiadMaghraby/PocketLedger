@@ -21,6 +21,12 @@ export function transaction(input, id = crypto.randomUUID()) {
   if (!CATEGORIES.includes(input.category)) throw new Error('Choose one of the supported categories.');
   return { id, date: input.date, description, type: input.type, category: input.category, amount: cents(input.amount) };
 }
+export function updateTransaction(state, id, input) {
+  const current = state.transactions.find(t => t.id === id);
+  if (!current) throw new Error('This transaction no longer exists. Reload and try again.');
+  const updated = { ...current, ...transaction(input, id) };
+  return { ...state, transactions: state.transactions.map(t => t.id === id ? updated : t) };
+}
 export function parseCSV(text) {
   if (text.length > 2_000_000) throw new Error('CSV files must be smaller than 2 MB.');
   text = text.replace(/^\uFEFF/, '');
