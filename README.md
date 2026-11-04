@@ -16,7 +16,7 @@ Open http://127.0.0.1:4173. Run `npm test` for the automated checks. No dependen
 
 - Monthly income, expenses, and net totals, calculated in integer minor units.
 - Category budgets with remaining and overspent amounts.
-- Spending distribution, searchable transaction history, and transaction deletion.
+- Spending distribution, searchable transaction history, and transaction editing/deletion.
 - CSV preview with validation and exact duplicate detection before saving.
 - JSON backup export and validated restore.
 - System light/dark theme, responsive layout, native accessible dialogs, and visible keyboard focus.
@@ -52,4 +52,4 @@ The included server binds to localhost and is a development server, not an authe
 
 ## Development
 
-Keep changes focused on a user need, include regression tests for data behavior, and run `npm test` before opening a PR. Never use real financial data in fixtures. Potential follow-ups include transaction editing, explicit CSV column mapping, recurring transactions, and accessible annual reports. Each should be scoped and tested as a complete feature.
+Keep changes focused on a user need, include regression tests for data behavior, and run `npm test` before opening a PR. Never use real financial data in fixtures. Potential follow-ups include explicit CSV column mapping, recurring transactions, and accessible annual reports. Each should be scoped and tested as a complete feature.

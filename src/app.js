@@ -1,8 +1,8 @@
-import { CATEGORIES, cents, transaction, monthly, emptyState, validateState, previewCSV } from './core.js';
+import { CATEGORIES, cents, transaction, monthly, emptyState, validateState, previewCSV, updateTransaction } from './core.js';
 const $ = selector => document.querySelector(selector), KEY = 'pocketledger.v1';
 const today = new Date();
 const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-let state = emptyState(), storageBlocked = false, pending = null;
+let state = emptyState(), storageBlocked = false, pending = null, editingId = null;
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function notify(text, error = false) { $('#message').hidden = false; $('#message').textContent = text; $('#message').classList.toggle('error', error); }
 try { const saved = localStorage.getItem(KEY); if (saved !== null) state = validateState(JSON.parse(saved)); }
@@ -31,7 +31,7 @@ function render() {
   const query = $('#search').value.trim().toLowerCase();
   const visible = summary.entries.filter(t => `${t.description} ${t.category}`.toLowerCase().includes(query)).sort((a, b) => b.date.localeCompare(a.date));
   $('#count').textContent = summary.entries.length;
-  $('#rows').innerHTML = visible.map(t => `<tr><td>${t.date}</td><td class="description">${escape(t.description)}</td><td><span class="tag">${t.category}</span></td><td class="amount ${t.type}">${t.type === 'income' ? '+' : '−'}${money(t.amount)}</td><td><button class="delete quiet" data-id="${escape(t.id)}" aria-label="Delete ${escape(t.description)}">×</button></td></tr>`).join('');
+  $('#rows').innerHTML = visible.map(t => `<tr><td>${t.date}</td><td class="description">${escape(t.description)}</td><td><span class="tag">${t.category}</span></td><td class="amount ${t.type}">${t.type === 'income' ? '+' : '−'}${money(t.amount)}</td><td><button class="quiet" data-edit="${escape(t.id)}" aria-label="Edit ${escape(t.description)}">Edit</button><button class="delete quiet" data-id="${escape(t.id)}" aria-label="Delete ${escape(t.description)}">×</button></td></tr>`).join('');
   if (!visible.length && summary.entries.length) $('#rows').innerHTML = '<tr><td colspan="5" class="center muted">No transactions match your search.</td></tr>';
   $('#empty').hidden = summary.entries.length > 0;
   $('#demo').hidden = state.transactions.length > 0 || Object.keys(state.budgets).length > 0 || storageBlocked;
@@ -44,13 +44,29 @@ $('#currency').onchange = () => {
   try { save({ ...state, currency }); notify('Currency updated. Amounts were not converted.'); } catch (e) { render(); notify(e.message, true); }
 };
 document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => button.closest('dialog').close());
-$('#add-open').onclick = () => { $('#entry-form').reset(); $('#entry-form [name=date]').value = localDate; $('#entry-form .form-error').textContent = ''; $('#entry-dialog').showModal(); };
+function openEntry(entry = null) {
+  editingId = entry?.id ?? null;
+  const form = $('#entry-form'); form.reset();
+  form.querySelector('h2').textContent = entry ? 'Edit transaction' : 'Add transaction';
+  form.querySelector('[type=submit]').textContent = entry ? 'Save changes' : 'Save transaction';
+  form.elements.date.value = entry?.date ?? localDate;
+  if (entry) for (const field of ['description', 'type', 'category', 'amount']) form.elements[field].value = field === 'amount' ? (entry.amount / 100).toFixed(2) : entry[field];
+  form.querySelector('.form-error').textContent = '';
+  $('#entry-dialog').showModal();
+}
+$('#add-open').onclick = () => openEntry();
 $('#entry-form').onsubmit = event => {
   event.preventDefault();
-  try { const entry = transaction(Object.fromEntries(new FormData(event.target))); save({ ...state, transactions: [...state.transactions, entry] }); $('#entry-dialog').close(); notify('Transaction saved.'); }
-  catch (error) { $('#entry-form .form-error').textContent = error.message; }
+  try {
+    const input = Object.fromEntries(new FormData(event.target));
+    const next = editingId ? updateTransaction(state, editingId, input) : { ...state, transactions: [...state.transactions, transaction(input)] };
+    save(next); $('#month').value = input.date.slice(0, 7); render();
+    $('#entry-dialog').close(); notify(editingId ? 'Transaction updated.' : 'Transaction saved.'); editingId = null;
+  } catch (error) { $('#entry-form .form-error').textContent = error.message; }
 };
 $('#rows').onclick = event => {
+  const edit = event.target.closest('[data-edit]');
+  if (edit) { const entry = state.transactions.find(t => t.id === edit.dataset.edit); if (entry) openEntry(entry); return; }
   const button = event.target.closest('[data-id]'); if (!button || !confirm('Delete this transaction? This cannot be undone.')) return;
   try { save({ ...state, transactions: state.transactions.filter(t => t.id !== button.dataset.id) }); notify('Transaction deleted.'); } catch (error) { notify(error.message, true); }
 };
