@@ -15,3 +15,15 @@ export function exportCSV(entries) {
   };
   return '\uFEFF' + [['date', 'description', 'type', 'category', 'amount'], ...entries.map(t => [t.date, t.description, t.type, t.category, (t.amount / 100).toFixed(2)])].map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
 }
+
+export function annualReport(state, year) {
+  if (!Number.isInteger(year) || year < 1900 || year > 9999) throw new Error('Choose a year from 1900 to 9999.');
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const { income, expense, balance, entries } = monthly(state, month);
+    return { month, income, expense, balance, count: entries.length, savingsRate: income ? balance / income * 100 : null };
+  });
+  const income = months.reduce((sum, m) => sum + m.income, 0);
+  const expense = months.reduce((sum, m) => sum + m.expense, 0);
+  return { year, months, income, expense, balance: income - expense, savingsRate: income ? (income - expense) / income * 100 : null };
+}

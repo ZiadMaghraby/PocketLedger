@@ -57,3 +57,7 @@ Keep changes focused on a user need, include regression tests for data behavior,
 ### Filtered CSV export
 
 Use the month selector, search, type, and category filters to choose records, then select **Export filtered CSV**. Exports include exact decimal amounts and UTF-8 text. Formula-like descriptions receive a leading apostrophe for spreadsheet safety; use JSON backups for lossless archival of those strings. Filters affect the table and export, while summary cards continue to show the whole month.
+
+### Annual report
+
+The annual report lists all twelve months, including empty months, with income, expenses, net, and savings rate. Choose a year independently of the transaction month. Savings rate is omitted where no income was recorded and can be negative when spending exceeds income. Only recorded transactions are included; the report does not project future payments.

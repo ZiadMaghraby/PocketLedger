@@ -1,4 +1,4 @@
-import { filterTransactions, exportCSV } from './reports.js';
+import { filterTransactions, exportCSV, annualReport } from './reports.js';
 import { CATEGORIES, cents, transaction, monthly, emptyState, validateState, previewCSV, updateTransaction } from './core.js';
 const $ = selector => document.querySelector(selector), KEY = 'pocketledger.v1';
 const today = new Date();
@@ -16,9 +16,11 @@ function save(next, restoring = false) {
 }
 const money = value => new Intl.NumberFormat('en', { style: 'currency', currency: state.currency }).format(value / 100);
 $('#month').value = localDate.slice(0, 7);
+$('#report-year').value = today.getFullYear();
 $('#category-filter').insertAdjacentHTML('beforeend', CATEGORIES.map(c => `<option>${c}</option>`).join(''));
 $('#entry-category').innerHTML = CATEGORIES.map(c => `<option>${c}</option>`).join('');
 function render() {
+  renderAnnual();
   const summary = monthly(state, $('#month').value);
   $('#currency').value = state.currency;
   $('#net').textContent = money(summary.balance); $('#income').textContent = money(summary.income); $('#expense').textContent = money(summary.expense);
@@ -41,6 +43,14 @@ function render() {
   $('#demo').hidden = state.transactions.length > 0 || Object.keys(state.budgets).length > 0 || storageBlocked;
 }
 $('#month').onchange = () => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test($('#month').value)) $('#month').value = localDate.slice(0, 7); render(); };
+function renderAnnual() {
+  const year = Number($('#report-year').value);
+  if (!$('#report-year').checkValidity()) return;
+  const report = annualReport(state, year);
+  $('#annual-summary').textContent = 'Income ' + money(report.income) + ' · Expenses ' + money(report.expense) + ' · Net ' + money(report.balance);
+  $('#annual-rows').innerHTML = report.months.map(m => '<tr><th scope="row">' + new Date(m.month + '-01T12:00:00Z').toLocaleString('en', { month: 'long', timeZone: 'UTC' }) + '</th><td class="amount income">' + money(m.income) + '</td><td class="amount">' + money(m.expense) + '</td><td class="amount">' + money(m.balance) + '</td><td class="amount">' + (m.savingsRate === null ? '—' : m.savingsRate.toFixed(1) + '%') + '</td></tr>').join('');
+}
+$('#report-year').onchange = () => { if (!$('#report-year').checkValidity()) { $('#report-year').reportValidity(); return; } renderAnnual(); };
 $('#search').oninput = render;
 $('#type-filter').onchange = $('#category-filter').onchange = render;
 $('#export-csv').onclick = () => {
